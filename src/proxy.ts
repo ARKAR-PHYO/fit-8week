@@ -21,7 +21,7 @@ export default auth((req) => {
 export const config = {
   matcher: [
     // Everything except: Auth.js endpoints, the login page, Next static assets,
-    // and the public PWA files (manifest, icons, service worker, offline page).
-    "/((?!api/auth|login|_next/static|_next/image|favicon.ico|icons/|manifest.webmanifest|sw.js|offline.html).*)",
+    // the public PWA files (manifest, icons, service worker, offline page), and dish photos.
+    "/((?!api/auth|login|_next/static|_next/image|favicon.ico|icons/|meals/|manifest.webmanifest|sw.js|offline.html).*)",
   ],
 };

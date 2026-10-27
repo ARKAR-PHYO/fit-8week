@@ -1,4 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
+import { MEAL_IMAGE_SIZE, recipeImage } from "@/content/images";
 import { KITCHEN_RULES, RECIPES, type Recipe } from "@/content/recipes";
 import { Card, PageTitle } from "@/components/ui";
 
@@ -17,9 +19,23 @@ export default function RecipesPage() {
           <ul className="divide-y divide-black/5 dark:divide-white/10">
             {RECIPES.filter((r) => group.kinds.includes(r.kind)).map((r) => (
               <li key={r.id}>
-                <Link href={`/recipes/${r.id}`} className="block py-3">
-                  <span className="block font-medium">{r.title}</span>
-                  <span className="block text-xs text-neutral-500">{r.usedOn}</span>
+                <Link href={`/recipes/${r.id}`} className="flex items-center gap-3 py-3">
+                  {recipeImage(r.id) ? (
+                    <Image
+                      src={recipeImage(r.id)!}
+                      alt=""
+                      width={MEAL_IMAGE_SIZE.width}
+                      height={MEAL_IMAGE_SIZE.height}
+                      unoptimized
+                      className="h-12 w-16 shrink-0 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <span className="h-12 w-16 shrink-0 rounded-lg bg-emerald-50 dark:bg-emerald-950" aria-hidden="true" />
+                  )}
+                  <span className="min-w-0">
+                    <span className="block font-medium">{r.title}</span>
+                    <span className="block text-xs text-neutral-500">{r.usedOn}</span>
+                  </span>
                 </Link>
               </li>
             ))}

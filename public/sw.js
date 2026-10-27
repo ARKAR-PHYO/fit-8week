@@ -1,14 +1,14 @@
 /*
  * Service worker for the 8-Week Plan PWA.
  *
- *  - /_next/static/* (hashed build files) and icons: cache-first, they never change.
+ *  - /_next/static/* (hashed build files), icons and dish photos: cache-first.
  *  - Page loads and in-app navigations: network-first; a successful response is cached,
  *    so pages you've opened before still load offline. Falls back to /offline.html.
  *  - /api/*: never cached here. Personal data is cached by the app in IndexedDB, and
  *    writes go through the app's own offline queue.
  *  - Redirects (e.g. to /login when signed out) are never cached.
  */
-const VERSION = "v1";
+const VERSION = "v2";
 const STATIC_CACHE = `static-${VERSION}`;
 const PAGE_CACHE = `pages-${VERSION}`;
 const OFFLINE_URL = "/offline.html";
@@ -42,13 +42,17 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
 
-  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/")) {
+  if (
+    url.pathname.startsWith("/_next/static/") ||
+    url.pathname.startsWith("/icons/") ||
+    url.pathname.startsWith("/meals/")
+  ) {
     event.respondWith(
       caches.match(request).then(
         (hit) =>
           hit ||
           fetch(request).then((res) => {
-            if (res.ok) {
+            if (res.ok && !res.redirected) {
               const copy = res.clone();
               caches.open(STATIC_CACHE).then((c) => c.put(request, copy));
             }

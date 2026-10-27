@@ -1,6 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
+import { MEAL_IMAGE_SIZE, mealImage } from "@/content/images";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { DAILY_TARGETS, MEAL_LABELS, MEALS, MENU, type Meal } from "@/content/menu";
@@ -154,7 +156,18 @@ function WeightCard({ date, data, checkinWeek }: { date: string; data: DayData |
 }
 
 function MealRow({ date, meal, data }: { date: string; meal: Meal; data: DayData | null }) {
-  const item = MENU[planDay(date).weekday][meal];
+  const day = planDay(date).weekday;
+  const item = MENU[day][meal];
+  const photo = (
+    <Image
+      src={mealImage(day, meal)}
+      alt=""
+      width={MEAL_IMAGE_SIZE.width}
+      height={MEAL_IMAGE_SIZE.height}
+      unoptimized
+      className="h-14 w-[4.5rem] shrink-0 rounded-lg object-cover"
+    />
+  );
   const entry = data?.meals[meal] ?? { done: false, topUp: false };
 
   return (
@@ -175,6 +188,13 @@ function MealRow({ date, meal, data }: { date: string; meal: Meal; data: DayData
           </svg>
         )}
       </button>
+      {item.recipeId ? (
+        <Link href={`/recipes/${item.recipeId}`} tabIndex={-1} aria-hidden="true" className="shrink-0">
+          {photo}
+        </Link>
+      ) : (
+        photo
+      )}
       <div className="min-w-0 flex-1">
         <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">{MEAL_LABELS[meal]}</p>
         {item.recipeId ? (
