@@ -5,6 +5,7 @@ import { addDays, FINAL_CHECKIN, PLAN_START, daysBetween, formatLongDate } from 
 import { bmi, elapsedPlanDays, scheduledSessions, sevenDayAverage, weeklyRate } from "@/lib/stats";
 import type { ProgressData } from "@/lib/types";
 import { Card, Notice, PageTitle } from "@/components/ui";
+import { LoadingLabel, Skeleton, SkeletonStats } from "@/components/Skeleton";
 
 export function ProgressView() {
   const today = useToday();
@@ -14,7 +15,14 @@ export function ProgressView() {
     <div className="space-y-4">
       <PageTitle sub="Judge the trend, not single days.">Progress</PageTitle>
       {error && <Notice tone="warn">{error}</Notice>}
-      {!data && source === "none" && !error && <p className="text-sm text-neutral-500">Loading…</p>}
+      {!data && source === "none" && !error && (
+        <>
+          <LoadingLabel>Loading progress</LoadingLabel>
+          <SkeletonStats tiles={6} />
+          <Skeleton className="h-44 w-full rounded-2xl" />
+          <SkeletonStats tiles={6} />
+        </>
+      )}
       {data && today && <Summary data={data} today={today} />}
     </div>
   );

@@ -105,6 +105,8 @@ npm run build
 
 The service worker only registers in production builds (`npm run build && npm start`).
 
+Icons and iOS launch screens are generated, not hand-made: `node scripts/make-icons.mjs` and `node scripts/make-splash.mjs` (the latter also writes `src/content/splash.json`, used by the root layout). iOS caches launch screens when the app is added to the home screen, so after changing them, remove the app from the home screen and add it again.
+
 ## Project layout
 
 ```

@@ -1,12 +1,13 @@
 import { Suspense } from "react";
 import { STOP_SIGNS, VIDEOS, WARM_UP } from "@/content/workouts";
+import { WeekSkeleton } from "@/components/Skeleton";
 import { Card } from "@/components/ui";
 import { WeekView } from "./WeekView";
 
 export default function WorkoutsPage() {
   return (
     <div className="space-y-4">
-      <Suspense fallback={<p className="text-sm text-neutral-500">Loading this week…</p>}>
+      <Suspense fallback={<WeekSkeleton />}>
         <WeekView />
       </Suspense>
 

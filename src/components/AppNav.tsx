@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 
 const ITEMS = [
@@ -10,6 +10,23 @@ const ITEMS = [
   { href: "/checkin", label: "Check-in", icon: "M4 6h16M4 12h10M4 18h7M17 16l2 2 4-4" },
   { href: "/progress", label: "Progress", icon: "M4 19V5M4 19h16M8 15l4-4 3 3 5-6" },
 ];
+
+/**
+ * Inside a tab Link: a thin animated bar along the top of the tapped tab while its page loads.
+ * (Positioned on the tab, not the screen: the nav's backdrop blur makes it the containing block.)
+ */
+function PendingBar() {
+  const { pending } = useLinkStatus();
+  if (!pending) return null;
+  return (
+    <span
+      aria-hidden="true"
+      className="absolute inset-x-2 top-0 h-0.5 overflow-hidden rounded-full bg-emerald-100 dark:bg-emerald-950"
+    >
+      <span className="block h-full w-2/5 animate-[nav-progress_1s_ease-in-out_infinite] bg-emerald-600 motion-reduce:animate-none" />
+    </span>
+  );
+}
 
 export function AppNav() {
   const pathname = usePathname();
@@ -26,7 +43,7 @@ export function AppNav() {
               <Link
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex flex-col items-center gap-1 py-2 text-[11px] font-medium ${
+                className={`relative flex flex-col items-center gap-1 py-2 text-[11px] font-medium ${
                   active ? "text-emerald-700 dark:text-emerald-400" : "text-neutral-500 dark:text-neutral-400"
                 }`}
               >
@@ -43,6 +60,7 @@ export function AppNav() {
                   <path d={item.icon} />
                 </svg>
                 {item.label}
+                <PendingBar />
               </Link>
             </li>
           );

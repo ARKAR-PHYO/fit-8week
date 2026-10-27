@@ -7,6 +7,7 @@ import { useProgress, useToday } from "@/lib/client/hooks";
 import { formatLongDate, planDay, PLAN_START, WEEKDAY_LABELS } from "@/lib/plan";
 import { dayStatus, findLog, hasPain, PLAN_WEEKS, weekDates, weeklyChecklist, type DayStatus } from "@/lib/training";
 import { Card, Notice, PageTitle } from "@/components/ui";
+import { LoadingLabel, Skeleton } from "@/components/Skeleton";
 import { VideoPlayer } from "@/components/workout/VideoPlayer";
 
 const STATUS: Record<DayStatus, { label: string; cls: string }> = {
@@ -22,6 +23,8 @@ export function WeekView() {
   const params = useSearchParams();
   const router = useRouter();
   const { data, error } = useProgress();
+  // Until the log has loaded, don't show "0 / 3" or "Missed" for days that may be done.
+  const loading = !data && !error;
 
   if (!today) return null;
   const current = today < PLAN_START ? 1 : planDay(today).week;
@@ -55,6 +58,7 @@ export function WeekView() {
       </nav>
 
       {error && <Notice tone="warn">{error}</Notice>}
+      {loading && <LoadingLabel>Loading your workout log</LoadingLabel>}
 
       <Card title="This week's checklist" aside={<span className="text-xs text-neutral-500">80–90% is excellent</span>}>
         <ul className="grid grid-cols-2 gap-2">
@@ -66,10 +70,14 @@ export function WeekView() {
                 className={`rounded-xl px-3 py-2 ${met ? "bg-emerald-50 dark:bg-emerald-950" : "bg-neutral-100 dark:bg-neutral-800"}`}
               >
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">{item.label}</p>
-                <p className={`text-lg font-semibold ${met ? "text-emerald-800 dark:text-emerald-300" : ""}`}>
-                  {met ? "✓ " : ""}
-                  {item.key === "rest" ? (met ? "Done" : "Sunday") : `${item.done} / ${item.target}`}
-                </p>
+                {loading ? (
+                  <Skeleton className="mt-1.5 h-5 w-12" />
+                ) : (
+                  <p className={`text-lg font-semibold ${met ? "text-emerald-800 dark:text-emerald-300" : ""}`}>
+                    {met ? "✓ " : ""}
+                    {item.key === "rest" ? (met ? "Done" : "Sunday") : `${item.done} / ${item.target}`}
+                  </p>
+                )}
                 {item.note && <p className="text-xs text-neutral-500">{item.note}</p>}
               </li>
             );
@@ -97,7 +105,13 @@ export function WeekView() {
                     {WEEKDAY_LABELS[weekday]} · {formatLongDate(date).split(" ").slice(1).join(" ")}
                   </span>
                 }
-                aside={<span className={`rounded-full px-2.5 py-1 text-xs font-medium ${STATUS[status].cls}`}>{STATUS[status].label}</span>}
+                aside={
+                  loading && status !== "rest" ? (
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                  ) : (
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${STATUS[status].cls}`}>{STATUS[status].label}</span>
+                  )
+                }
               >
                 <h3 className="font-semibold">{plan.title}</h3>
                 <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm">
@@ -124,7 +138,7 @@ export function WeekView() {
                     ))}
                   </div>
                 )}
-                {canStart && (
+                {canStart && !loading && (
                   <Link
                     href={`/workouts/session?date=${date}`}
                     className="mt-3 inline-flex items-center justify-center rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white"

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppNav } from "@/components/AppNav";
+import { Splash } from "@/components/Splash";
 import { SyncBadge } from "@/components/SyncBadge";
 
 export default function AppLayout({ children }: LayoutProps<"/">) {
@@ -13,6 +14,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       </header>
       <main className="px-4 pb-[calc(env(safe-area-inset-bottom)+6rem)] pt-4">{children}</main>
       <AppNav />
+      <Splash />
     </div>
   );
 }

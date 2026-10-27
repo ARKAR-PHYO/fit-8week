@@ -9,6 +9,7 @@ import { enqueue } from "@/lib/client/store";
 import { checkinDate, checkinLabel, CHECKIN_WEEKS, daysBetween, formatLongDate, PLAN_START } from "@/lib/plan";
 import type { CheckinEntry } from "@/lib/types";
 import { buttonClass, Card, inputClass, Notice, PageTitle } from "@/components/ui";
+import { LoadingLabel, Skeleton } from "@/components/Skeleton";
 
 const LABELS: Record<CheckinField, string> = {
   weightKg: "Weight (kg)",
@@ -60,13 +61,27 @@ export function CheckinView() {
         </select>
       </label>
       {progress.error && <Notice tone="warn">{progress.error}</Notice>}
-      {/* Keyed so the form resets when the week or the loaded values change. */}
-      <CheckinForm
-        key={`${week}-${progress.source}-${JSON.stringify(entry?.values ?? {})}`}
-        week={week}
-        entry={entry}
-        heightCm={progress.data?.settings.heightCm ?? null}
-      />
+      {/* Wait for saved values before showing the form, so nothing typed gets reset when they arrive. */}
+      {progress.source === "none" && !progress.error ? (
+        <Card title={checkinLabel(week)}>
+          <LoadingLabel>Loading check-in</LoadingLabel>
+          <div className="grid grid-cols-2 gap-3">
+            {Array.from({ length: 10 }, (_, i) => (
+              <Skeleton key={i} className="h-[4.25rem] rounded-xl" />
+            ))}
+            <Skeleton className="col-span-2 h-20 rounded-xl" />
+            <Skeleton className="col-span-2 h-11 rounded-xl" />
+          </div>
+        </Card>
+      ) : (
+        // Keyed so the form resets when the week or the loaded values change.
+        <CheckinForm
+          key={`${week}-${JSON.stringify(entry?.values ?? {})}`}
+          week={week}
+          entry={entry}
+          heightCm={progress.data?.settings.heightCm ?? null}
+        />
+      )}
     </div>
   );
 }

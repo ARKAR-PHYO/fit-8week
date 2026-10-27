@@ -1,9 +1,10 @@
 import { Suspense } from "react";
+import { DetailSkeleton } from "@/components/Skeleton";
 import { SessionView } from "./SessionView";
 
 export default function SessionPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-neutral-500">Loading session…</p>}>
+    <Suspense fallback={<DetailSkeleton label="Loading session" />}>
       <SessionView />
     </Suspense>
   );

@@ -1,9 +1,10 @@
 import { Suspense } from "react";
+import { TodaySkeleton } from "@/components/Skeleton";
 import { TodayView } from "./TodayView";
 
 export default function TodayPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-neutral-500">Loading today…</p>}>
+    <Suspense fallback={<TodaySkeleton />}>
       <TodayView />
     </Suspense>
   );

@@ -10,6 +10,31 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Splash: hidden on reloads within a session, and fades out on its own if scripts never run. */
+.no-splash #splash {
+  display: none;
+}
+#splash {
+  animation: splash-failsafe 0.4s ease-out 2.5s forwards;
+}
+@keyframes splash-failsafe {
+  to {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+/* Thin progress bar shown while a tab switch is pending. */
+@keyframes nav-progress {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
 body {
   font-family: var(--font-sans);
 }

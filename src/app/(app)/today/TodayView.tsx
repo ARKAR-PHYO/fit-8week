@@ -21,6 +21,7 @@ import {
 } from "@/lib/plan";
 import type { DayData } from "@/lib/types";
 import { buttonClass, Card, inputClass, Notice } from "@/components/ui";
+import { LoadingLabel, Skeleton } from "@/components/Skeleton";
 
 export function TodayView() {
   const today = useToday();
@@ -39,6 +40,8 @@ export function TodayView() {
 function DayScreen({ date, today }: { date: string; today: string }) {
   const pd = planDay(date);
   const { data, source, error } = useDay(date);
+  // Nothing cached and the Sheet hasn't answered yet: show placeholders, not empty values.
+  const loading = source === "none" && !error;
   const menu = MENU[pd.weekday];
   const checkinWeek = checkinWeekForDate(date);
   const prev = addDays(date, -1);
@@ -68,16 +71,16 @@ function DayScreen({ date, today }: { date: string; today: string }) {
         <Notice>The plan starts Monday 2 November. This is a preview of Day 1.</Notice>
       )}
       {error && <Notice tone="warn">{error}</Notice>}
-      {source === "none" && !error && <p className="text-xs text-neutral-500">Loading your entries…</p>}
+      {loading && <LoadingLabel>Loading your entries</LoadingLabel>}
 
-      <WeightCard date={date} data={data} checkinWeek={checkinWeek} />
+      <WeightCard date={date} data={data} checkinWeek={checkinWeek} loading={loading} />
 
       {pd.phase !== "after" && (
         <>
           <Card title="Meals" aside={<span className="text-xs text-neutral-500">{DAILY_TARGETS.protein}</span>}>
             <ul className="divide-y divide-black/5 dark:divide-white/10">
               {MEALS.map((meal) => (
-                <MealRow key={meal} date={date} meal={meal} data={data} />
+                <MealRow key={meal} date={date} meal={meal} data={data} loading={loading} />
               ))}
             </ul>
             <p className="mt-3 text-xs text-neutral-500">
@@ -85,7 +88,7 @@ function DayScreen({ date, today }: { date: string; today: string }) {
             </p>
           </Card>
 
-          <WorkoutCard key={`${date}-${data?.workout?.updatedAt ?? ""}`} date={date} week={pd.week} data={data} />
+          <WorkoutCard key={`${date}-${data?.workout?.updatedAt ?? ""}`} date={date} week={pd.week} data={data} loading={loading} />
           {menu.lunch.topUp && (
             <p className="px-1 text-xs text-neutral-500">
               Protein top-up day: 1 extra egg and 80 g extra chicken at lunch.
@@ -107,7 +110,17 @@ function DayLink({ date, label, disabled, children }: { date: string; label: str
   );
 }
 
-function WeightCard({ date, data, checkinWeek }: { date: string; data: DayData | null; checkinWeek: number | null }) {
+function WeightCard({
+  date,
+  data,
+  checkinWeek,
+  loading,
+}: {
+  date: string;
+  data: DayData | null;
+  checkinWeek: number | null;
+  loading: boolean;
+}) {
   const saved = data?.weightKg ?? null;
   const [draft, setDraft] = useState<string | null>(null);
   const value = draft ?? (saved === null ? "" : String(saved));
@@ -116,7 +129,16 @@ function WeightCard({ date, data, checkinWeek }: { date: string; data: DayData |
   const changed = valid && parsed !== saved;
 
   return (
-    <Card title="Morning weigh-in" aside={saved !== null ? <span className="text-sm font-semibold">{saved} kg</span> : null}>
+    <Card
+      title="Morning weigh-in"
+      aside={
+        loading ? (
+          <Skeleton className="h-4 w-14" />
+        ) : saved !== null ? (
+          <span className="text-sm font-semibold">{saved} kg</span>
+        ) : null
+      }
+    >
       <form
         className="flex gap-2"
         onSubmit={(e) => {
@@ -155,7 +177,7 @@ function WeightCard({ date, data, checkinWeek }: { date: string; data: DayData |
   );
 }
 
-function MealRow({ date, meal, data }: { date: string; meal: Meal; data: DayData | null }) {
+function MealRow({ date, meal, data, loading }: { date: string; meal: Meal; data: DayData | null; loading: boolean }) {
   const day = planDay(date).weekday;
   const item = MENU[day][meal];
   const photo = (
@@ -172,22 +194,26 @@ function MealRow({ date, meal, data }: { date: string; meal: Meal; data: DayData
 
   return (
     <li className="flex items-start gap-3 py-3">
-      <button
-        type="button"
-        role="checkbox"
-        aria-checked={entry.done}
-        aria-label={`${MEAL_LABELS[meal]} eaten`}
-        onClick={() => void enqueue({ type: "meal", date, meal, done: !entry.done, topUp: entry.topUp })}
-        className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 ${
-          entry.done ? "border-emerald-600 bg-emerald-600 text-white" : "border-neutral-300 dark:border-neutral-600"
-        }`}
-      >
-        {entry.done && (
-          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={3} aria-hidden="true">
-            <path d="M5 12l5 5 9-10" />
-          </svg>
-        )}
-      </button>
+      {loading ? (
+        <Skeleton className="mt-0.5 h-7 w-7 shrink-0 rounded-full" />
+      ) : (
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={entry.done}
+          aria-label={`${MEAL_LABELS[meal]} eaten`}
+          onClick={() => void enqueue({ type: "meal", date, meal, done: !entry.done, topUp: entry.topUp })}
+          className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 ${
+            entry.done ? "border-emerald-600 bg-emerald-600 text-white" : "border-neutral-300 dark:border-neutral-600"
+          }`}
+        >
+          {entry.done && (
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={3} aria-hidden="true">
+              <path d="M5 12l5 5 9-10" />
+            </svg>
+          )}
+        </button>
+      )}
       {item.recipeId ? (
         <Link href={`/recipes/${item.recipeId}`} tabIndex={-1} aria-hidden="true" className="shrink-0">
           {photo}
@@ -204,7 +230,8 @@ function MealRow({ date, meal, data }: { date: string; meal: Meal; data: DayData
         ) : (
           <p className="font-medium">{item.title}</p>
         )}
-        {item.topUp && (
+        {item.topUp && loading && <Skeleton className="mt-1.5 h-6 w-full max-w-56 rounded-full" />}
+        {item.topUp && !loading && (
           <button
             type="button"
             role="checkbox"
@@ -230,7 +257,7 @@ function numberOrNull(v: string, min: number, max: number): number | null {
   return Number.isFinite(n) && n >= min && n <= max ? n : null;
 }
 
-function WorkoutCard({ date, week, data }: { date: string; week: number; data: DayData | null }) {
+function WorkoutCard({ date, week, data, loading }: { date: string; week: number; data: DayData | null; loading: boolean }) {
   const plan = SCHEDULE[planDay(date).weekday];
   const saved = data?.workout && data.workout.session === plan.session ? data.workout : null;
   const [open, setOpen] = useState(false);
@@ -282,7 +309,13 @@ function WorkoutCard({ date, week, data }: { date: string; week: number; data: D
       )}
       <p className="mt-2 text-xs text-neutral-500">Apple Watch: {plan.watch}</p>
 
-      {plan.session !== "rest" && (
+      {plan.session !== "rest" && loading && (
+        <div className="mt-4 space-y-3">
+          <Skeleton className="h-12 w-full rounded-xl" />
+          <Skeleton className="h-10 w-48 rounded-xl" />
+        </div>
+      )}
+      {plan.session !== "rest" && !loading && (
         <div className="mt-4 space-y-3">
           {!completed && (
             <Link href={`/workouts/session?date=${date}`} className={`${buttonClass} w-full py-3 text-base`}>
