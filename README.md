@@ -23,6 +23,7 @@ iPhone / Mac ──► fit.luncreative.com (Vercel)
 - **Two devices:** each change carries the time it was made. An older change arriving after a newer one is dropped (`stale`), so the latest edit wins.
 - **Sheet layout is checked** on every read/write by header name. A renamed or missing column returns a clear error instead of writing to the wrong place.
 - All values are written `RAW`, so text that looks like a formula stays text.
+- **Body fat estimate:** when a check-in saves waist or neck, the server recalculates the US Navy estimate (`src/lib/bodyfat.ts`) from waist, neck and the Dashboard's height, and writes it to *Body Fat % (Navy est.)*. The manual *Body Fat % (optional)* column is left for scale readings.
 - Plan content (menu, recipes, workouts) lives in `src/content/*.ts` and is prerendered; it works offline.
 
 ## Setup (one time, about 30 minutes)

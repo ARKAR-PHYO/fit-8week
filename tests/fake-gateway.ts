@@ -73,7 +73,7 @@ export function trackerFixture(): Record<string, Cell[][]> {
     [
       "Week", "Check-in Date", "Weight (kg)", "Waist at Navel (cm)", "Chest (cm)", "Hips (cm)", "Neck (cm)",
       "Left Arm (cm)", "Right Arm (cm)", "Left Thigh (cm)", "Right Thigh (cm)", "Body Fat % (optional)",
-      "Front Photo Link", "Side Photo Link", "Back Photo Link", "Notes",
+      "Front Photo Link", "Side Photo Link", "Back Photo Link", "Notes", "Body Fat % (Navy est.)",
     ],
   ];
   for (let w = 0; w <= 8; w++) {

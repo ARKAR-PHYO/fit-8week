@@ -111,6 +111,48 @@ describe("check-ins", () => {
   });
 });
 
+describe("Navy body fat estimate", () => {
+  const navyCol = 16; // "Body Fat % (Navy est.)", after Notes
+
+  it("is calculated on save from waist, neck and the Dashboard height", async () => {
+    const gw = sheet();
+    await applyOp(gw, { id: uuid(), at: "2026-11-02T01:00:00.000Z", type: "checkin", week: 0, waistCm: 109, neckCm: 42 });
+    expect(gw.tabs.get("Weekly Measurements")![1][navyCol]).toBe(31);
+    const p = await getProgress(gw);
+    expect(p.checkins[0].bodyFatNavyPct).toBe(31);
+  });
+
+  it("uses the neck already in the Sheet when only the waist changes", async () => {
+    const gw = sheet();
+    await applyOp(gw, { id: uuid(), at: "2026-11-09T01:00:00.000Z", type: "checkin", week: 1, neckCm: 42 });
+    await applyOp(gw, { id: uuid(), at: "2026-11-09T01:05:00.000Z", type: "checkin", week: 1, waistCm: 105 });
+    expect(gw.tabs.get("Weekly Measurements")![2][navyCol]).toBe(28.7);
+  });
+
+  it("clears the estimate instead of leaving a stale one when an input is removed", async () => {
+    const gw = sheet();
+    await applyOp(gw, { id: uuid(), at: "2026-11-02T01:00:00.000Z", type: "checkin", week: 0, waistCm: 109, neckCm: 42 });
+    await applyOp(gw, { id: uuid(), at: "2026-11-02T01:05:00.000Z", type: "checkin", week: 0, neckCm: null });
+    expect(gw.tabs.get("Weekly Measurements")![1][navyCol]).toBe("");
+  });
+
+  it("leaves the manual Body Fat % column alone", async () => {
+    const gw = sheet();
+    await applyOp(gw, { id: uuid(), at: "2026-11-02T01:00:00.000Z", type: "checkin", week: 0, bodyFatPct: 29.5 });
+    await applyOp(gw, { id: uuid(), at: "2026-11-02T01:05:00.000Z", type: "checkin", week: 0, waistCm: 109, neckCm: 42 });
+    const row = gw.tabs.get("Weekly Measurements")![1];
+    expect(row[11]).toBe(29.5);
+    expect(row[navyCol]).toBe(31);
+  });
+
+  it("does not touch the estimate when waist and neck are not part of the save", async () => {
+    const gw = sheet();
+    await applyOp(gw, { id: uuid(), at: "2026-11-02T01:00:00.000Z", type: "checkin", week: 0, waistCm: 109, neckCm: 42 });
+    await applyOp(gw, { id: uuid(), at: "2026-11-02T01:05:00.000Z", type: "checkin", week: 0, chestCm: 112 });
+    expect(gw.tabs.get("Weekly Measurements")![1][navyCol]).toBe(31);
+  });
+});
+
 describe("structure checks", () => {
   it("fails loudly if a header is renamed", async () => {
     const gw = sheet();

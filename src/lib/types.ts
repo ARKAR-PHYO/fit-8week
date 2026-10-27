@@ -34,6 +34,8 @@ export interface CheckinEntry {
   label: string;
   date: string;
   values: Record<CheckinField, number | null>;
+  /** Navy-method estimate, calculated by the app on save. Separate from a manually entered %. */
+  bodyFatNavyPct: number | null;
   notes: string;
 }
 

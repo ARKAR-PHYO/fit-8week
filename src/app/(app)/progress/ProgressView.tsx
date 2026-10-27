@@ -44,6 +44,9 @@ function Summary({ data, today }: { data: ProgressData; today: string }) {
   const sessions = scheduledSessions(today);
   const baselineWaist = data.checkins[0]?.values.waistCm ?? null;
   const latestWaist = [...data.checkins].reverse().find((c) => c.values.waistCm !== null)?.values.waistCm ?? null;
+  const navy = data.checkins.filter((c) => c.bodyFatNavyPct !== null);
+  const firstNavy = navy[0] ?? null;
+  const lastNavy = navy.at(-1) ?? null;
 
   return (
     <>
@@ -83,6 +86,20 @@ function Summary({ data, today }: { data: ProgressData; today: string }) {
             label="Waist change"
             value={baselineWaist !== null && latestWaist !== null ? `${fmt(latestWaist - baselineWaist)} cm` : "—"}
             sub={baselineWaist === null ? "Add a baseline waist" : undefined}
+          />
+          <Stat
+            label="Body fat (Navy est.)"
+            value={lastNavy ? `${fmt(lastNavy.bodyFatNavyPct)}%` : "—"}
+            sub={lastNavy ? `${lastNavy.label}` : "Add waist + neck at check-in"}
+          />
+          <Stat
+            label="Body fat change"
+            value={
+              firstNavy && lastNavy && firstNavy !== lastNavy
+                ? `${fmt(lastNavy.bodyFatNavyPct! - firstNavy.bodyFatNavyPct!)} pts`
+                : "—"
+            }
+            sub={firstNavy && lastNavy && firstNavy !== lastNavy ? `Since ${firstNavy.label}` : "After 2 check-ins"}
           />
         </div>
         <p className="mt-3 text-xs text-neutral-500">80–90% consistency is an excellent week.</p>

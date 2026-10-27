@@ -10,6 +10,7 @@ import {
   type WeightOp,
   type WorkoutOp,
 } from "@/lib/ops";
+import { navyBodyFatMale } from "@/lib/bodyfat";
 import { checkinDate, checkinLabel } from "@/lib/plan";
 import type { CheckinEntry, DayData, MealEntry, ProgressData, WorkoutEntry } from "@/lib/types";
 import type { Cell, SheetsGateway, ValueUpdate } from "./gateway";
@@ -133,6 +134,7 @@ export async function getProgress(gw: SheetsGateway): Promise<ProgressData> {
       label,
       date: row ? cellDate(row[wkCols.date]) || checkinDate(week) : checkinDate(week),
       values,
+      bodyFatNavyPct: row ? cellNumber(row[wkCols.bodyFatNavy]) : null,
       notes: row ? cellText(row[wkCols.notes]) : "",
     });
   }
@@ -266,7 +268,7 @@ async function applyWorkout(gw: SheetsGateway, op: WorkoutOp): Promise<OpStatus>
 
 async function applyCheckin(gw: SheetsGateway, op: CheckinOp): Promise<OpStatus> {
   const tab = TABS.weekly.name;
-  const [grid] = await gw.readMany([`${quoteTab(tab)}!A1:Z`]);
+  const [grid, dash] = await gw.readMany([`${quoteTab(tab)}!A1:Z`, `${quoteTab(TABS.dashboard.name)}!A1:Z`]);
   const cols = mapColumns(tab, grid[0], TABS.weekly.headers);
   const label = checkinLabel(op.week);
   const hit = dataRows(grid).find(({ row }) => cellText(row[cols.week]).toLowerCase() === label.toLowerCase());
@@ -282,6 +284,17 @@ async function applyCheckin(gw: SheetsGateway, op: CheckinOp): Promise<OpStatus>
   if (op.notes !== undefined) {
     updates.push({ range: cellRange(tab, hit.rowNumber, cols.notes), values: [[op.notes]] });
   }
+
+  // Recalculate the Navy estimate from the row as it will be after this save: values in the op
+  // win, otherwise what's already in the Sheet. Height comes from the Dashboard. If an input is
+  // missing or implausible, the estimate cell is cleared rather than left stale.
+  if (op.waistCm !== undefined || op.neckCm !== undefined) {
+    const waist = op.waistCm !== undefined ? op.waistCm : cellNumber(hit.row[cols.waistCm]);
+    const neck = op.neckCm !== undefined ? op.neckCm : cellNumber(hit.row[cols.neckCm]);
+    const estimate = navyBodyFatMale(waist, neck, dashboardValue(dash ?? [], "Height (cm)"));
+    updates.push({ range: cellRange(tab, hit.rowNumber, cols.bodyFatNavy), values: [[estimate ?? ""]] });
+  }
+
   await gw.write(updates);
   return "ok";
 }

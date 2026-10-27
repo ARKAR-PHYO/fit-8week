@@ -28,6 +28,7 @@ export const TABS = {
       rightThighCm: "Right Thigh (cm)",
       bodyFatPct: "Body Fat % (optional)",
       notes: "Notes",
+      bodyFatNavy: "Body Fat % (Navy est.)",
     },
   },
   mealLog: {

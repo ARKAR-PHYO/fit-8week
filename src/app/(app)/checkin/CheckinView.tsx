@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { navyBodyFatMale } from "@/lib/bodyfat";
 import { CHECKIN_FIELDS, type CheckinField } from "@/lib/ops";
 import { useProgress, useToday } from "@/lib/client/hooks";
 import { enqueue } from "@/lib/client/store";
@@ -60,12 +61,31 @@ export function CheckinView() {
       </label>
       {progress.error && <Notice tone="warn">{progress.error}</Notice>}
       {/* Keyed so the form resets when the week or the loaded values change. */}
-      <CheckinForm key={`${week}-${progress.source}-${JSON.stringify(entry?.values ?? {})}`} week={week} entry={entry} />
+      <CheckinForm
+        key={`${week}-${progress.source}-${JSON.stringify(entry?.values ?? {})}`}
+        week={week}
+        entry={entry}
+        heightCm={progress.data?.settings.heightCm ?? null}
+      />
     </div>
   );
 }
 
-function CheckinForm({ week, entry }: { week: number; entry: CheckinEntry | undefined }) {
+function parseCm(v: string): number | null {
+  if (v.trim() === "") return null;
+  const n = Number(v.replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+}
+
+function CheckinForm({
+  week,
+  entry,
+  heightCm,
+}: {
+  week: number;
+  entry: CheckinEntry | undefined;
+  heightCm: number | null;
+}) {
   const initial = Object.fromEntries(
     CHECKIN_FIELDS.map((f) => [f, entry?.values[f] == null ? "" : String(entry.values[f])]),
   ) as Record<CheckinField, string>;
@@ -75,6 +95,7 @@ function CheckinForm({ week, entry }: { week: number; entry: CheckinEntry | unde
 
   const changed = CHECKIN_FIELDS.filter((f) => values[f] !== initial[f]);
   const invalid = changed.filter((f) => values[f] !== "" && !Number.isFinite(Number(values[f].replace(",", "."))));
+  const estimate = navyBodyFatMale(parseCm(values.waistCm), parseCm(values.neckCm), heightCm);
 
   return (
     <Card title={checkinLabel(week)}>
@@ -108,6 +129,16 @@ function CheckinForm({ week, entry }: { week: number; entry: CheckinEntry | unde
             />
           </label>
         ))}
+        <div className="col-span-2 rounded-xl bg-emerald-50 px-3 py-2 dark:bg-emerald-950" aria-live="polite">
+          <p className="text-xs text-emerald-900 dark:text-emerald-200">Estimated body fat (US Navy method)</p>
+          <p className="text-lg font-semibold text-emerald-900 dark:text-emerald-100">
+            {estimate !== null ? `${estimate.toFixed(1)}%` : "Enter waist and neck"}
+          </p>
+          <p className="text-xs text-emerald-900/70 dark:text-emerald-200/70">
+            Calculated from waist, neck and height{heightCm ? ` (${heightCm} cm)` : ""}. Saved to its own column. About
+            ±3–4% for one reading; the weekly trend is what counts.
+          </p>
+        </div>
         <label className="col-span-2 text-xs text-neutral-500">
           Notes
           <input className={`${inputClass} mt-1`} maxLength={300} value={notes} onChange={(e) => setNotes(e.target.value)} />
