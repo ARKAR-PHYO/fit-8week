@@ -51,4 +51,15 @@ export interface ProgressData {
   mealsDone: number;
   topUpsDone: number;
   workoutsDone: number;
+  /** Latest state of every logged session, oldest first. */
+  workouts: WorkoutLogEntry[];
+}
+
+export interface WorkoutLogEntry {
+  date: string;
+  session: string;
+  completed: boolean;
+  minutes: number | null;
+  effort: number | null;
+  notes: string;
 }

@@ -284,9 +284,18 @@ function WorkoutCard({ date, week, data }: { date: string; week: number; data: D
 
       {plan.session !== "rest" && (
         <div className="mt-4 space-y-3">
+          {!completed && (
+            <Link href={`/workouts/session?date=${date}`} className={`${buttonClass} w-full py-3 text-base`}>
+              Start workout
+            </Link>
+          )}
           <div className="flex gap-2">
-            <button type="button" className={buttonClass} onClick={() => void save(!completed)}>
-              {completed ? "✓ Done (tap to undo)" : "Mark as done"}
+            <button
+              type="button"
+              className={completed ? buttonClass : "rounded-xl bg-neutral-100 px-4 py-2.5 text-sm font-semibold text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"}
+              onClick={() => void save(!completed)}
+            >
+              {completed ? "✓ Done (tap to undo)" : "Just mark as done"}
             </button>
             <button
               type="button"

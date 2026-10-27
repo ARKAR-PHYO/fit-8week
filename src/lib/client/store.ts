@@ -266,6 +266,27 @@ export function overlayDay(day: DayData, ops: Op[]): DayData {
   return out;
 }
 
+/** Applies queued workout changes to the progress data's workout list. */
+export function overlayProgress(progress: ProgressData, ops: Op[]): ProgressData {
+  // Progress cached by an older version of the app has no workouts list.
+  const workouts = [...(progress.workouts ?? [])];
+  for (const o of ops) {
+    if (o.type !== "workout") continue;
+    const entry = {
+      date: o.date,
+      session: o.session,
+      completed: o.completed,
+      minutes: o.minutes ?? null,
+      effort: o.effort ?? null,
+      notes: o.notes ?? "",
+    };
+    const i = workouts.findIndex((w) => w.date === o.date && w.session === o.session);
+    if (i >= 0) workouts[i] = entry;
+    else workouts.push(entry);
+  }
+  return { ...progress, workouts };
+}
+
 /** Wipes everything this app stored on the device (used on sign-out). */
 export async function clearDevice() {
   if (db) await clear(db);

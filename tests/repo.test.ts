@@ -181,6 +181,22 @@ describe("progress", () => {
   });
 });
 
+describe("progress workouts list", () => {
+  it("returns the latest state of each logged session, oldest first", async () => {
+    const gw = sheet();
+    const base = { type: "workout", session: "strength" } as const;
+    await applyOp(gw, { ...base, id: uuid(), at: "2026-11-04T13:00:00.000Z", date: "2026-11-04", completed: true, minutes: 40, effort: 6 });
+    await applyOp(gw, { ...base, id: uuid(), at: "2026-11-02T13:00:00.000Z", date: "2026-11-02", completed: false });
+    await applyOp(gw, { ...base, id: uuid(), at: "2026-11-02T14:00:00.000Z", date: "2026-11-02", completed: true, notes: "PAIN: knee" });
+    const p = await getProgress(gw);
+    expect(p.workouts).toEqual([
+      { date: "2026-11-02", session: "strength", completed: true, minutes: null, effort: null, notes: "PAIN: knee" },
+      { date: "2026-11-04", session: "strength", completed: true, minutes: 40, effort: 6, notes: "" },
+    ]);
+    expect(p.workoutsDone).toBe(2);
+  });
+});
+
 describe("op validation", () => {
   const ok = { id: crypto.randomUUID(), at: "2026-11-03T05:00:00.000Z" };
   it("rejects dates outside the plan", () => {

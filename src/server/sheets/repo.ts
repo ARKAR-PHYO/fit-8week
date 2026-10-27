@@ -12,7 +12,7 @@ import {
 } from "@/lib/ops";
 import { navyBodyFatMale } from "@/lib/bodyfat";
 import { checkinDate, checkinLabel } from "@/lib/plan";
-import type { CheckinEntry, DayData, MealEntry, ProgressData, WorkoutEntry } from "@/lib/types";
+import type { CheckinEntry, DayData, MealEntry, ProgressData, WorkoutEntry, WorkoutLogEntry } from "@/lib/types";
 import type { Cell, SheetsGateway, ValueUpdate } from "./gateway";
 import {
   cellBool,
@@ -154,12 +154,25 @@ export async function getProgress(gw: SheetsGateway): Promise<ProgressData> {
 
   const wl = tabs.get(TABS.workoutLog.name)!;
   const wlCols = mapColumns(TABS.workoutLog.name, wl[0], TABS.workoutLog.headers);
-  const latestWorkout = new Map<string, { completed: boolean; at: string }>();
+  const latestWorkout = new Map<string, WorkoutLogEntry & { at: string }>();
   for (const { row } of dataRows(wl)) {
-    const key = `${cellDate(row[wlCols.date])}|${cellText(row[wlCols.session])}`;
+    const date = cellDate(row[wlCols.date]);
+    const session = cellText(row[wlCols.session]);
+    if (!date || !session) continue;
+    const key = `${date}|${session}`;
     const at = cellText(row[wlCols.updatedAt]);
     const prev = latestWorkout.get(key);
-    if (!prev || at > prev.at) latestWorkout.set(key, { completed: cellBool(row[wlCols.completed]), at });
+    if (!prev || at > prev.at) {
+      latestWorkout.set(key, {
+        date,
+        session,
+        completed: cellBool(row[wlCols.completed]),
+        minutes: cellNumber(row[wlCols.minutes]),
+        effort: cellNumber(row[wlCols.effort]),
+        notes: cellText(row[wlCols.notes]),
+        at,
+      });
+    }
   }
 
   return {
@@ -169,6 +182,16 @@ export async function getProgress(gw: SheetsGateway): Promise<ProgressData> {
     mealsDone: [...latestMeal.values()].filter((m) => m.done).length,
     topUpsDone: [...latestMeal.values()].filter((m) => m.topUp).length,
     workoutsDone: [...latestWorkout.values()].filter((w) => w.completed).length,
+    workouts: [...latestWorkout.values()]
+      .map((w): WorkoutLogEntry => ({
+        date: w.date,
+        session: w.session,
+        completed: w.completed,
+        minutes: w.minutes,
+        effort: w.effort,
+        notes: w.notes,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date)),
   };
 }
 

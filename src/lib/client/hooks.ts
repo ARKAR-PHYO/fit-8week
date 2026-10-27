@@ -14,6 +14,7 @@ import {
   getSyncState,
   onDataChanged,
   overlayDay,
+  overlayProgress,
   pendingOps,
   subscribe,
 } from "./store";
@@ -113,20 +114,39 @@ export function useProgress(): Load<ProgressData> & { reload: () => void } {
 
   useEffect(() => {
     let cancelled = false;
+    let base: ProgressData | null = null;
+    let source: Load<ProgressData>["source"] = "none";
+    let error: string | null = null;
+
+    // Show queued workouts as logged right away, before they reach the Sheet.
+    const apply = async () => {
+      if (!base) return;
+      const ops = await pendingOps();
+      if (!cancelled) setState({ data: overlayProgress(base, ops), source, error });
+    };
+
     const load = async () => {
       const cached = await cachedProgress();
       if (cancelled) return;
-      if (cached) setState({ data: cached, source: "cache", error: null });
-      try {
-        const fresh = await fetchProgress();
-        if (!cancelled) setState({ data: fresh, source: "network", error: null });
-      } catch (err) {
-        if (!cancelled) setState((s) => ({ ...s, error: describe(err) }));
+      if (cached) {
+        base = cached;
+        source = "cache";
+        await apply();
       }
+      try {
+        base = await fetchProgress();
+        source = "network";
+        error = null;
+      } catch (err) {
+        error = describe(err);
+      }
+      if (base) await apply();
+      else if (!cancelled) setState((s) => ({ ...s, error }));
     };
     void load();
     const off = onDataChanged((kind) => {
       if (kind === "synced") void load();
+      else void apply();
     });
     return () => {
       cancelled = true;
