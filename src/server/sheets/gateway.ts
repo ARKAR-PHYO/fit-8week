@@ -15,6 +15,8 @@ export interface ValueUpdate {
 export interface SheetsGateway {
   /** Reads several A1 ranges in one call. Values come back unformatted (numbers as numbers). */
   readMany(ranges: string[]): Promise<Cell[][][]>;
+  /** Like readMany, but formula cells come back as their formula text ("=..."). */
+  readFormulas(ranges: string[]): Promise<Cell[][][]>;
   /** Writes several ranges in one call. Values are written RAW: text starting with "=" stays text. */
   write(updates: ValueUpdate[]): Promise<void>;
   /** Appends rows after the last row of the table that starts in `range`. */
@@ -55,6 +57,10 @@ export function getGateway(): SheetsGateway {
         valueRenderOption: "UNFORMATTED_VALUE",
         dateTimeRenderOption: "FORMATTED_STRING",
       });
+      return (res.data.valueRanges ?? []).map((vr) => (vr.values ?? []) as Cell[][]);
+    },
+    async readFormulas(ranges) {
+      const res = await api.spreadsheets.values.batchGet({ spreadsheetId, ranges, valueRenderOption: "FORMULA" });
       return (res.data.valueRanges ?? []).map((vr) => (vr.values ?? []) as Cell[][]);
     },
     async write(updates) {

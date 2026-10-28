@@ -1,4 +1,4 @@
-import { addDays, daysBetween, PLAN_DAYS, PLAN_START, weekdayOf } from "@/lib/plan";
+import { addDays, daysBetween, DIET_START, FINAL_CHECKIN, PLAN_DAYS, PLAN_START, weekdayOf } from "@/lib/plan";
 
 export interface WeightPoint {
   date: string;
@@ -23,6 +23,12 @@ export function bmi(weightKg: number, heightCm: number): number {
 /** Plan days that have fully passed or are today, capped to the plan length. */
 export function elapsedPlanDays(today: string): number {
   return Math.min(Math.max(daysBetween(PLAN_START, today) + 1, 0), PLAN_DAYS);
+}
+
+/** Days of the meal plan so far (it starts the day after Day 1), so Day 1 doesn't count as missed meals. */
+export function elapsedDietDays(today: string): number {
+  const end = today > FINAL_CHECKIN ? FINAL_CHECKIN : today;
+  return Math.min(Math.max(daysBetween(DIET_START, end) + 1, 0), PLAN_DAYS - daysBetween(PLAN_START, DIET_START));
 }
 
 /** Training sessions scheduled so far (every day except Sunday rest). */

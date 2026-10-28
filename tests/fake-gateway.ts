@@ -39,6 +39,11 @@ export class FakeGateway implements SheetsGateway {
     });
   }
 
+  /** The fake stores formula text as-is, so a formula read is the same read. */
+  async readFormulas(ranges: string[]): Promise<Cell[][][]> {
+    return this.readMany(ranges);
+  }
+
   async write(updates: ValueUpdate[]): Promise<void> {
     this.calls.write++;
     for (const { range, values } of updates) {
@@ -66,8 +71,8 @@ export class FakeGateway implements SheetsGateway {
 export function trackerFixture(): Record<string, Cell[][]> {
   const daily: Cell[][] = [["Date", "Weight (kg)", "7-Day Avg (kg)", "Loss From Start (kg)", "BMI", "Notes"]];
   for (let d = 0; d < 57; d++) {
-    const date = new Date(Date.UTC(2026, 10, 2 + d)).toISOString().slice(0, 10);
-    daily.push([date, d === 0 ? 96.6 : "", "=formula", "=formula", "=formula", ""]);
+    const date = new Date(Date.UTC(2026, 9, 28 + d)).toISOString().slice(0, 10);
+    daily.push([date, d === 1 ? 96.6 : "", "=formula", "=formula", "=formula", ""]);
   }
   const weekly: Cell[][] = [
     [
@@ -77,13 +82,14 @@ export function trackerFixture(): Record<string, Cell[][]> {
     ],
   ];
   for (let w = 0; w <= 8; w++) {
-    const date = new Date(Date.UTC(2026, 10, 2 + w * 7)).toISOString().slice(0, 10);
-    weekly.push([w === 0 ? "Baseline" : `Week ${w}`, date, w === 0 ? 96.6 : ""]);
+    // Baseline weight is taken the morning after Day 1; the Weight column is a lookup formula, as in the real Sheet.
+    const date = new Date(Date.UTC(2026, 9, w === 0 ? 29 : 28 + w * 7)).toISOString().slice(0, 10);
+    weekly.push([w === 0 ? "Baseline" : `Week ${w}`, date, "=IFERROR(XLOOKUP(B2,'Daily Weight'!A:A,'Daily Weight'!B:B,\"\"),\"\")"]);
   }
   return {
     Dashboard: [
       ["Body Transformation Dashboard"],
-      ["Start Date", "2026-11-02"],
+      ["Start Date", "2026-10-28"],
       ["Height (cm)", 170.6],
       ["Starting Weight (kg)", 96.6],
       ["Long-term Milestone — BMI 30 (kg)", 87.3],

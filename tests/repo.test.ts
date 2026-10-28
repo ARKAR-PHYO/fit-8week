@@ -11,12 +11,16 @@ function sheet() {
   return new FakeGateway(trackerFixture());
 }
 
+/** The Daily Weight row for a date, found by value so tests don't depend on row positions. */
+function dailyRow(gw: FakeGateway, date: string) {
+  return gw.tabs.get("Daily Weight")!.find((r) => r[0] === date)!;
+}
+
 describe("weight", () => {
   it("writes only the Weight cell of the matching date row and leaves formulas alone", async () => {
     const gw = sheet();
     await applyOp(gw, { id: uuid(), at: "2026-11-05T01:00:00.000Z", type: "weight", date: "2026-11-05", weightKg: 95.8 });
-    const row = gw.tabs.get("Daily Weight")![4];
-    expect(row).toEqual(["2026-11-05", 95.8, "=formula", "=formula", "=formula", ""]);
+    expect(dailyRow(gw, "2026-11-05")).toEqual(["2026-11-05", 95.8, "=formula", "=formula", "=formula", ""]);
     expect(gw.calls.append).toBe(0);
   });
 
@@ -37,17 +41,18 @@ describe("weight", () => {
 
   it("refuses to append when the date row is missing", async () => {
     const gw = sheet();
-    gw.tabs.get("Daily Weight")!.pop(); // drop Dec 28
+    gw.tabs.get("Daily Weight")!.pop(); // drop Dec 23, the last row
     await expect(
-      applyOp(gw, { id: uuid(), at: "2026-12-28T01:00:00.000Z", type: "weight", date: "2026-12-28", weightKg: 92 }),
+      applyOp(gw, { id: uuid(), at: "2026-12-23T01:00:00.000Z", type: "weight", date: "2026-12-23", weightKg: 92 }),
     ).rejects.toBeInstanceOf(SheetStructureError);
   });
 
   it("still finds a date that Sheets converted to a date serial", async () => {
     const gw = sheet();
-    gw.tabs.get("Daily Weight")![2][0] = 46329; // 2026-11-03 as a Sheets serial
+    const row = dailyRow(gw, "2026-11-03");
+    row[0] = 46329; // 2026-11-03 as a Sheets serial
     await applyOp(gw, { id: uuid(), at: "2026-11-03T01:00:00.000Z", type: "weight", date: "2026-11-03", weightKg: 96.1 });
-    expect(gw.tabs.get("Daily Weight")![2][1]).toBe(96.1);
+    expect(row[1]).toBe(96.1);
   });
 });
 
@@ -102,12 +107,35 @@ describe("meal and workout logs", () => {
 describe("check-ins", () => {
   it("writes only the fields provided, by header name", async () => {
     const gw = sheet();
-    await applyOp(gw, { id: uuid(), at: "2026-11-09T01:00:00.000Z", type: "checkin", week: 1, weightKg: 95.4, waistCm: 108 });
+    await applyOp(gw, { id: uuid(), at: "2026-11-04T01:00:00.000Z", type: "checkin", week: 1, waistCm: 108 });
     const row = gw.tabs.get("Weekly Measurements")![2];
     expect(row[0]).toBe("Week 1");
-    expect(row[2]).toBe(95.4);
     expect(row[3]).toBe(108);
     expect(row[4] ?? "").toBe("");
+  });
+
+  it("saves a check-in weight as that morning's weigh-in and keeps the Weight lookup formula", async () => {
+    const gw = sheet();
+    await applyOp(gw, { id: uuid(), at: "2026-11-04T01:00:00.000Z", type: "checkin", week: 1, weightKg: 95.4, waistCm: 108 });
+    const row = gw.tabs.get("Weekly Measurements")![2];
+    expect(String(row[2])).toMatch(/^=IFERROR\(XLOOKUP/);
+    expect(dailyRow(gw, "2026-11-04")[1]).toBe(95.4);
+  });
+
+  it("baseline weight goes to the morning after Day 1 (the Baseline row's date)", async () => {
+    const gw = sheet();
+    await applyOp(gw, { id: uuid(), at: "2026-10-29T01:00:00.000Z", type: "checkin", week: 0, weightKg: 96.2 });
+    expect(dailyRow(gw, "2026-10-29")[1]).toBe(96.2);
+    expect(dailyRow(gw, "2026-10-28")[1]).toBe("");
+  });
+
+  it("refuses to overwrite any other formula cell", async () => {
+    const gw = sheet();
+    gw.tabs.get("Weekly Measurements")![2][3] = "=SUM(1,2)"; // pretend Waist is a formula
+    await expect(
+      applyOp(gw, { id: uuid(), at: "2026-11-04T01:00:00.000Z", type: "checkin", week: 1, waistCm: 108 }),
+    ).rejects.toThrow(/is a formula/);
+    expect(gw.tabs.get("Weekly Measurements")![2][3]).toBe("=SUM(1,2)");
   });
 });
 
@@ -172,12 +200,13 @@ describe("progress", () => {
     const p = await getProgress(gw);
     expect(p.settings).toEqual({ startWeightKg: 96.6, heightCm: 170.6, targetKg: 91.5, milestoneKg: 87.3 });
     expect(p.weights).toEqual([
-      { date: "2026-11-02", weightKg: 96.6 },
+      { date: "2026-10-29", weightKg: 96.6 },
       { date: "2026-11-03", weightKg: 96 },
     ]);
     expect(p.mealsDone).toBe(1);
     expect(p.topUpsDone).toBe(1);
-    expect(p.checkins[0]).toMatchObject({ label: "Baseline", date: "2026-11-02" });
+    expect(p.checkins[0]).toMatchObject({ label: "Baseline", date: "2026-10-29" });
+    expect(p.checkins[1]).toMatchObject({ label: "Week 1", date: "2026-11-04" });
   });
 });
 
@@ -200,7 +229,7 @@ describe("progress workouts list", () => {
 describe("op validation", () => {
   const ok = { id: crypto.randomUUID(), at: "2026-11-03T05:00:00.000Z" };
   it("rejects dates outside the plan", () => {
-    expect(opSchema.safeParse({ ...ok, type: "weight", date: "2026-10-30", weightKg: 96 }).success).toBe(false);
+    expect(opSchema.safeParse({ ...ok, type: "weight", date: "2026-10-27", weightKg: 96 }).success).toBe(false);
   });
   it("rejects impossible weights", () => {
     expect(opSchema.safeParse({ ...ok, type: "weight", date: "2026-11-03", weightKg: 960 }).success).toBe(false);

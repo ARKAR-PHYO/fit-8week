@@ -23,10 +23,11 @@ const log = (date: string, session: string, completed = true): WorkoutLogEntry =
 });
 
 describe("weekDates", () => {
-  it("week 1 is Nov 2–8, week 8 is Dec 21–27", () => {
-    expect(weekDates(1)[0]).toEqual({ date: "2026-11-02", weekday: "mon" });
-    expect(weekDates(1)[6]).toEqual({ date: "2026-11-08", weekday: "sun" });
-    expect(weekDates(8)[6].date).toBe("2026-12-27");
+  it("weeks run Wednesday to Tuesday: week 1 is Oct 28 – Nov 3, week 8 ends Dec 22", () => {
+    expect(weekDates(1)[0]).toEqual({ date: "2026-10-28", weekday: "wed" });
+    expect(weekDates(1)[4]).toEqual({ date: "2026-11-01", weekday: "sun" });
+    expect(weekDates(1)[6]).toEqual({ date: "2026-11-03", weekday: "tue" });
+    expect(weekDates(8)[6].date).toBe("2026-12-22");
   });
 });
 
@@ -60,15 +61,16 @@ describe("dayStatus", () => {
 
 describe("weeklyChecklist", () => {
   it("counts Friday toward both strength and HIIT", () => {
+    // Week 1: Wed 28 Oct – Tue 3 Nov.
     const logs = [
+      log("2026-10-28", "strength"),
+      log("2026-10-29", "mobility"),
+      log("2026-10-30", "strength_hiit"),
       log("2026-11-02", "strength"),
-      log("2026-11-04", "strength"),
-      log("2026-11-06", "strength_hiit"),
       log("2026-11-03", "cardio"),
-      log("2026-11-05", "mobility"),
-      log("2026-11-10", "cardio"), // next week, ignored
+      log("2026-11-07", "cardio"), // next week, ignored
     ];
-    const c = Object.fromEntries(weeklyChecklist(1, logs, "2026-11-09").map((i) => [i.key, i]));
+    const c = Object.fromEntries(weeklyChecklist(1, logs, "2026-11-04").map((i) => [i.key, i]));
     expect(c.strength.done).toBe(3);
     expect(c.hiit.done).toBe(1);
     expect(c.cardio.done).toBe(1);
@@ -77,8 +79,9 @@ describe("weeklyChecklist", () => {
   });
 
   it("rest day only counts once Sunday has come, and not if a hard session was logged", () => {
-    expect(weeklyChecklist(1, [], "2026-11-07").find((i) => i.key === "rest")!.done).toBe(0);
-    const c = weeklyChecklist(1, [log("2026-11-08", "cardio")], "2026-11-09");
+    expect(weeklyChecklist(1, [], "2026-10-31").find((i) => i.key === "rest")!.done).toBe(0);
+    expect(weeklyChecklist(1, [], "2026-11-01").find((i) => i.key === "rest")!.done).toBe(1);
+    const c = weeklyChecklist(1, [log("2026-11-01", "cardio")], "2026-11-02");
     expect(c.find((i) => i.key === "rest")!.done).toBe(0);
   });
 

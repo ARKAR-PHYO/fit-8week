@@ -1,6 +1,6 @@
 # 8-Week Plan
 
-A private PWA for the 8-week fat-loss plan (Nov 2 – Dec 28, 2026): daily menu and recipes, workouts with the right duration for each week, weigh-ins, weekly check-ins and progress. Your Google Sheet tracker is the only data store, so the phone and the Mac always see the same data.
+A private PWA for the 8-week fat-loss plan (Day 1 Wed 28 Oct, last day Tue 22 Dec, final check-in Wed 23 Dec 2026; the meal plan starts Day 2): daily menu and recipes, workouts with the right duration for each week, weigh-ins, weekly check-ins and progress. Your Google Sheet tracker is the only data store, so the phone and the Mac always see the same data.
 
 **Stack:** Next.js 16 (App Router, Cache Components) · Auth.js v5 (Google sign-in, email allowlist) · Google Sheets API via a service account · hand-written service worker · Vercel (`sin1`).
 
@@ -23,6 +23,7 @@ iPhone / Mac ──► fit.luncreative.com (Vercel)
 - **Two devices:** each change carries the time it was made. An older change arriving after a newer one is dropped (`stale`), so the latest edit wins.
 - **Sheet layout is checked** on every read/write by header name. A renamed or missing column returns a clear error instead of writing to the wrong place.
 - All values are written `RAW`, so text that looks like a formula stays text.
+- **Check-in weight:** the *Weight (kg)* column in Weekly Measurements is a lookup formula into Daily Weight for the check-in date, so a weight entered at check-in is saved as that morning's Daily Weight entry. The app never writes into a formula cell; it returns an error instead. The Baseline row is dated the morning after Day 1, when the baseline weight is taken.
 - **Body fat estimate:** when a check-in saves waist or neck, the server recalculates the US Navy estimate (`src/lib/bodyfat.ts`) from waist, neck and the Dashboard's height, and writes it to *Body Fat % (Navy est.)*. The manual *Body Fat % (optional)* column is left for scale readings.
 - Plan content (menu, recipes, workouts) lives in `src/content/*.ts` and is prerendered; it works offline.
 

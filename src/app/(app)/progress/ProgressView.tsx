@@ -2,7 +2,7 @@
 
 import { useProgress, useToday } from "@/lib/client/hooks";
 import { addDays, FINAL_CHECKIN, PLAN_START, daysBetween, formatLongDate } from "@/lib/plan";
-import { bmi, elapsedPlanDays, scheduledSessions, sevenDayAverage, weeklyRate } from "@/lib/stats";
+import { bmi, elapsedDietDays, elapsedPlanDays, scheduledSessions, sevenDayAverage, weeklyRate } from "@/lib/stats";
 import type { ProgressData } from "@/lib/types";
 import { Card, Notice, PageTitle } from "@/components/ui";
 import { LoadingLabel, Skeleton, SkeletonStats } from "@/components/Skeleton";
@@ -49,6 +49,7 @@ function Summary({ data, today }: { data: ProgressData; today: string }) {
   const lost = start !== null && latestAvg !== null ? start - latestAvg : null;
   const rate = weeklyRate(avgs);
   const days = elapsedPlanDays(today);
+  const dietDays = elapsedDietDays(today);
   const sessions = scheduledSessions(today);
   const baselineWaist = data.checkins[0]?.values.waistCm ?? null;
   const latestWaist = [...data.checkins].reverse().find((c) => c.values.waistCm !== null)?.values.waistCm ?? null;
@@ -87,7 +88,11 @@ function Summary({ data, today }: { data: ProgressData; today: string }) {
 
       <Card title="Consistency">
         <div className="grid grid-cols-2 gap-2">
-          <Stat label="Meals logged" value={`${data.mealsDone} / ${days * 4}`} sub={days ? `${Math.round((data.mealsDone / (days * 4)) * 100)}%` : undefined} />
+          <Stat
+            label="Meals logged"
+            value={`${data.mealsDone} / ${dietDays * 4}`}
+            sub={dietDays ? `${Math.round((data.mealsDone / (dietDays * 4)) * 100)}%` : "Meal plan starts Day 2"}
+          />
           <Stat label="Workouts done" value={`${data.workoutsDone} / ${sessions}`} sub={sessions ? `${Math.round((data.workoutsDone / sessions) * 100)}%` : undefined} />
           <Stat label="Weigh-ins" value={`${weights.length}`} sub={`${days} plan day${days === 1 ? "" : "s"} so far`} />
           <Stat

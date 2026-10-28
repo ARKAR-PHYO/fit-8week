@@ -5,9 +5,11 @@
  */
 
 export const PLAN_TIME_ZONE = "Asia/Yangon";
-export const PLAN_START = "2026-11-02"; // Day 1, Monday
-export const PLAN_DAYS = 56; // 8 weeks, last day Sun 2026-12-27
-export const FINAL_CHECKIN = "2026-12-28"; // Week 8 check-in, Monday after Day 56
+export const PLAN_START = "2026-10-28"; // Day 1, Wednesday: first workout + baseline tape measurements
+export const DIET_START = "2026-10-29"; // Day 2: the meal plan starts the day after the first workout
+export const PLAN_DAYS = 56; // 8 weeks, last day Tue 2026-12-22
+export const FINAL_CHECKIN = "2026-12-23"; // Week 8 check-in, the Wednesday after Day 56
+// Plan weeks run Wednesday to Tuesday. Menus and workouts still follow the weekday.
 
 export const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 export type Weekday = (typeof WEEKDAYS)[number];
@@ -98,7 +100,7 @@ export function isLoggableDate(date: string): boolean {
   return daysBetween(PLAN_START, date) >= 0 && daysBetween(date, FINAL_CHECKIN) >= 0;
 }
 
-/** Weekly check-ins: 0 = Baseline (Nov 2), 1..8 = following Mondays. */
+/** Weekly check-ins: 0 = Baseline (Day 1), 1..8 = the same weekday each following week. */
 export const CHECKIN_WEEKS = [0, 1, 2, 3, 4, 5, 6, 7, 8] as const;
 export type CheckinWeek = (typeof CHECKIN_WEEKS)[number];
 
@@ -110,7 +112,7 @@ export function checkinLabel(week: number): string {
   return week === 0 ? "Baseline" : `Week ${week}`;
 }
 
-/** The check-in week for a date, or null if the date is not a check-in Monday. */
+/** The check-in week for a date, or null if the date is not a check-in day. */
 export function checkinWeekForDate(date: string): CheckinWeek | null {
   const offset = daysBetween(PLAN_START, date);
   if (offset < 0 || offset % 7 !== 0) return null;

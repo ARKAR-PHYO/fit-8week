@@ -12,7 +12,7 @@ import { buttonClass, Card, inputClass, Notice, PageTitle } from "@/components/u
 import { LoadingLabel, Skeleton } from "@/components/Skeleton";
 
 const LABELS: Record<CheckinField, string> = {
-  weightKg: "Weight (kg)",
+  weightKg: "Weight (kg), morning",
   waistCm: "Waist at navel (cm)",
   chestCm: "Chest (cm)",
   hipsCm: "Hips (cm)",
@@ -24,7 +24,7 @@ const LABELS: Record<CheckinField, string> = {
   bodyFatPct: "Body fat % (optional)",
 };
 
-/** The most recent check-in Monday on or before today, clamped to 0–8. */
+/** The most recent check-in day on or before today, clamped to 0–8. */
 function currentWeek(today: string): number {
   const offset = daysBetween(PLAN_START, today);
   return Math.min(Math.max(Math.floor(offset / 7), 0), 8);
@@ -45,7 +45,7 @@ export function CheckinView() {
 
   return (
     <div className="space-y-4">
-      <PageTitle sub="Mondays before breakfast. Same tape, same spot, relaxed stomach.">Weekly check-in</PageTitle>
+      <PageTitle sub="Wednesdays before breakfast. Same tape, same spot, relaxed stomach.">Weekly check-in</PageTitle>
       <label className="block text-sm">
         <span className="text-neutral-500">Check-in</span>
         <select

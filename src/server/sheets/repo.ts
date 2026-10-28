@@ -291,18 +291,30 @@ async function applyWorkout(gw: SheetsGateway, op: WorkoutOp): Promise<OpStatus>
 
 async function applyCheckin(gw: SheetsGateway, op: CheckinOp): Promise<OpStatus> {
   const tab = TABS.weekly.name;
-  const [grid, dash] = await gw.readMany([`${quoteTab(tab)}!A1:Z`, `${quoteTab(TABS.dashboard.name)}!A1:Z`]);
+  const weeklyRange = `${quoteTab(tab)}!A1:Z`;
+  const [[grid, dash], [formulas]] = await Promise.all([
+    gw.readMany([weeklyRange, `${quoteTab(TABS.dashboard.name)}!A1:Z`]),
+    gw.readFormulas([weeklyRange]),
+  ]);
   const cols = mapColumns(tab, grid[0], TABS.weekly.headers);
   const label = checkinLabel(op.week);
   const hit = dataRows(grid).find(({ row }) => cellText(row[cols.week]).toLowerCase() === label.toLowerCase());
   if (!hit) throw new SheetStructureError(`Weekly Measurements has no row "${label}"`);
+  const formulaRow = formulas[hit.rowNumber - 1] ?? [];
+  const isFormula = (col: number) => String(formulaRow[col] ?? "").startsWith("=");
+  const updates: ValueUpdate[] = [];
+  const write = (col: number, value: Cell, header: string) => {
+    // Never overwrite a formula the Sheet relies on.
+    if (isFormula(col)) throw new SheetStructureError(`"${header}" in ${label} is a formula; the app won't overwrite it`);
+    updates.push({ range: cellRange(tab, hit.rowNumber, col), values: [[value]] });
+  };
 
   // Only fields present in the op are written, so a partial check-in never blanks others.
-  const updates: ValueUpdate[] = [];
   for (const field of CHECKIN_FIELDS) {
     const v = op[field];
     if (v === undefined) continue;
-    updates.push({ range: cellRange(tab, hit.rowNumber, cols[field]), values: [[v ?? ""]] });
+    if (field === "weightKg" && isFormula(cols.weightKg)) continue; // saved as that day's weigh-in, below
+    write(cols[field], v ?? "", TABS.weekly.headers[field]);
   }
   if (op.notes !== undefined) {
     updates.push({ range: cellRange(tab, hit.rowNumber, cols.notes), values: [[op.notes]] });
@@ -315,10 +327,17 @@ async function applyCheckin(gw: SheetsGateway, op: CheckinOp): Promise<OpStatus>
     const waist = op.waistCm !== undefined ? op.waistCm : cellNumber(hit.row[cols.waistCm]);
     const neck = op.neckCm !== undefined ? op.neckCm : cellNumber(hit.row[cols.neckCm]);
     const estimate = navyBodyFatMale(waist, neck, dashboardValue(dash ?? [], "Height (cm)"));
-    updates.push({ range: cellRange(tab, hit.rowNumber, cols.bodyFatNavy), values: [[estimate ?? ""]] });
+    write(cols.bodyFatNavy, estimate ?? "", TABS.weekly.headers.bodyFatNavy);
   }
 
   await gw.write(updates);
+
+  // The check-in's Weight cell is a formula that looks up Daily Weight for the check-in date,
+  // so a weight entered at check-in is saved as that morning's weigh-in instead.
+  if (op.weightKg !== undefined && isFormula(cols.weightKg)) {
+    const date = cellDate(hit.row[cols.date]);
+    await applyWeight(gw, { id: op.id, at: op.at, type: "weight", date, weightKg: op.weightKg });
+  }
   return "ok";
 }
 

@@ -4,15 +4,18 @@
  * workout plan, and the steps of a guided session. Pure functions, unit-tested.
  */
 import { SCHEDULE, VIDEOS, WARM_UP, type SessionId, type Video } from "@/content/workouts";
-import { addDays, PLAN_START, WEEKDAYS, type Weekday } from "@/lib/plan";
+import { addDays, PLAN_START, weekdayOf, type Weekday } from "@/lib/plan";
 import type { WorkoutLogEntry } from "@/lib/types";
 
 export const PLAN_WEEKS = 8;
 
-/** Monday..Sunday dates of plan week 1–8. */
+/** The 7 dates of plan week 1–8, in order. Weeks start on the plan's first weekday, not Monday. */
 export function weekDates(week: number): { date: string; weekday: Weekday }[] {
-  const monday = addDays(PLAN_START, (week - 1) * 7);
-  return WEEKDAYS.map((weekday, i) => ({ date: addDays(monday, i), weekday }));
+  const first = addDays(PLAN_START, (week - 1) * 7);
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = addDays(first, i);
+    return { date, weekday: weekdayOf(date) };
+  });
 }
 
 /** Target minutes for sessions measured by time, from the workout plan's weekly progression. */
@@ -63,7 +66,7 @@ export function weeklyChecklist(week: number, logs: WorkoutLogEntry[], today: st
   const dates = new Set(weekDates(week).map((d) => d.date));
   const done = (sessions: SessionId[]) =>
     logs.filter((l) => dates.has(l.date) && l.completed && sessions.includes(l.session as SessionId)).length;
-  const sunday = weekDates(week)[6].date;
+  const sunday = weekDates(week).find((d) => d.weekday === "sun")!.date;
   const sundayHard = logs.some((l) => l.date === sunday && l.completed && l.session !== "rest");
 
   return [

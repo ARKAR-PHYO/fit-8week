@@ -7,9 +7,9 @@
 import { z } from "zod";
 import { MEALS } from "@/content/menu";
 import { SESSIONS } from "@/content/workouts";
-import { isLoggableDate } from "@/lib/plan";
+import { FINAL_CHECKIN, isLoggableDate, PLAN_START } from "@/lib/plan";
 
-const planDate = z.string().refine(isLoggableDate, "Date must be a real date from 2026-11-02 to 2026-12-28");
+const planDate = z.string().refine(isLoggableDate, `Date must be a real date from ${PLAN_START} to ${FINAL_CHECKIN}`);
 
 const base = {
   id: z.uuid(),

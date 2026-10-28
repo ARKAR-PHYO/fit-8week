@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bmi, elapsedPlanDays, scheduledSessions, sevenDayAverage, weeklyRate } from "@/lib/stats";
+import { bmi, elapsedDietDays, elapsedPlanDays, scheduledSessions, sevenDayAverage, weeklyRate } from "@/lib/stats";
 
 describe("stats", () => {
   it("averages only entries inside the trailing 7 days", () => {
@@ -19,11 +19,19 @@ describe("stats", () => {
   });
 
   it("counts elapsed days and sessions", () => {
-    expect(elapsedPlanDays("2026-10-30")).toBe(0);
-    expect(elapsedPlanDays("2026-11-02")).toBe(1);
+    expect(elapsedPlanDays("2026-10-27")).toBe(0);
+    expect(elapsedPlanDays("2026-10-28")).toBe(1);
     expect(elapsedPlanDays("2027-01-10")).toBe(56);
-    expect(scheduledSessions("2026-11-08")).toBe(6);
-    expect(scheduledSessions("2026-12-27")).toBe(48);
+    expect(scheduledSessions("2026-10-28")).toBe(1); // tonight's strength session
+    expect(scheduledSessions("2026-11-03")).toBe(6); // week 1 has one Sunday rest
+    expect(scheduledSessions("2026-12-22")).toBe(48);
+  });
+
+  it("counts meal-plan days from Day 2, so Day 1 isn't missed meals", () => {
+    expect(elapsedDietDays("2026-10-28")).toBe(0);
+    expect(elapsedDietDays("2026-10-29")).toBe(1);
+    expect(elapsedDietDays("2026-12-22")).toBe(55);
+    expect(elapsedDietDays("2027-01-10")).toBe(55);
   });
 
   it("computes a weekly rate only after a week of data", () => {

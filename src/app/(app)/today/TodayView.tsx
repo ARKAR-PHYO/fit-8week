@@ -13,6 +13,7 @@ import {
   addDays,
   checkinLabel,
   checkinWeekForDate,
+  DIET_START,
   FINAL_CHECKIN,
   formatLongDate,
   isLoggableDate,
@@ -68,7 +69,7 @@ function DayScreen({ date, today }: { date: string; today: string }) {
       </div>
 
       {today < PLAN_START && date === PLAN_START && (
-        <Notice>The plan starts Monday 2 November. This is a preview of Day 1.</Notice>
+        <Notice>The plan starts {formatLongDate(PLAN_START)}. This is a preview of Day 1.</Notice>
       )}
       {error && <Notice tone="warn">{error}</Notice>}
       {loading && <LoadingLabel>Loading your entries</LoadingLabel>}
@@ -77,19 +78,26 @@ function DayScreen({ date, today }: { date: string; today: string }) {
 
       {pd.phase !== "after" && (
         <>
-          <Card title="Meals" aside={<span className="text-xs text-neutral-500">{DAILY_TARGETS.protein}</span>}>
-            <ul className="divide-y divide-black/5 dark:divide-white/10">
-              {MEALS.map((meal) => (
-                <MealRow key={meal} date={date} meal={meal} data={data} loading={loading} />
-              ))}
-            </ul>
-            <p className="mt-3 text-xs text-neutral-500">
-              {DAILY_TARGETS.kcal} · {DAILY_TARGETS.water} · {DAILY_TARGETS.oil}
-            </p>
-          </Card>
+          {date < DIET_START ? (
+            <Notice>
+              Day 1: workout and baseline measurements only. The meal plan starts tomorrow, {formatLongDate(DIET_START)}.
+              Weigh yourself tomorrow morning for your baseline weight.
+            </Notice>
+          ) : (
+            <Card title="Meals" aside={<span className="text-xs text-neutral-500">{DAILY_TARGETS.protein}</span>}>
+              <ul className="divide-y divide-black/5 dark:divide-white/10">
+                {MEALS.map((meal) => (
+                  <MealRow key={meal} date={date} meal={meal} data={data} loading={loading} />
+                ))}
+              </ul>
+              <p className="mt-3 text-xs text-neutral-500">
+                {DAILY_TARGETS.kcal} · {DAILY_TARGETS.water} · {DAILY_TARGETS.oil}
+              </p>
+            </Card>
+          )}
 
           <WorkoutCard key={`${date}-${data?.workout?.updatedAt ?? ""}`} date={date} week={pd.week} data={data} loading={loading} />
-          {menu.lunch.topUp && (
+          {menu.lunch.topUp && date >= DIET_START && (
             <p className="px-1 text-xs text-neutral-500">
               Protein top-up day: 1 extra egg and 80 g extra chicken at lunch.
             </p>
