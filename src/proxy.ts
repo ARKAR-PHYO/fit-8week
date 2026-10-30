@@ -20,8 +20,9 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    // Everything except: Auth.js endpoints, the login page, Next static assets,
-    // the public PWA files (manifest, icons, launch images, service worker, offline page), and dish photos.
-    "/((?!api/auth|login|_next/static|_next/image|favicon.ico|icons/|splash/|meals/|manifest.webmanifest|sw.js|offline.html).*)",
+    // Everything except: Auth.js endpoints, the token-authenticated ingest endpoint (checks its
+    // own bearer token), the login page, Next static assets, the public PWA files (manifest,
+    // icons, launch images, service worker, offline page), and dish photos.
+    "/((?!api/auth|api/ingest/|login|_next/static|_next/image|favicon.ico|icons/|splash/|meals/|manifest.webmanifest|sw.js|offline.html).*)",
   ],
 };

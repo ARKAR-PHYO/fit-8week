@@ -49,6 +49,37 @@ export const TABS = {
       updatedAt: "Updated At",
     },
   },
+  /** Written only by /api/ingest/activity (the iPhone Shortcut). One row per date. */
+  dailyActivity: {
+    name: "Daily Activity",
+    headers: {
+      date: "Date",
+      source: "Source",
+      activeKcal: "Active kcal",
+      exerciseMin: "Exercise min",
+      steps: "Steps",
+      distanceKm: "Distance (km)",
+      restingHr: "Resting HR",
+      updatedAt: "Updated At",
+    },
+  },
+  /** Written only by /api/ingest/activity. One row per watch workout, keyed by its start time. */
+  watchWorkouts: {
+    name: "Watch Workouts",
+    headers: {
+      date: "Date",
+      start: "Start",
+      end: "End",
+      type: "Type",
+      minutes: "Minutes",
+      activeKcal: "Active kcal",
+      avgHr: "Avg HR",
+      maxHr: "Max HR",
+      distanceKm: "Distance (km)",
+      source: "Source",
+      updatedAt: "Updated At",
+    },
+  },
 } as const;
 
 export class SheetStructureError extends Error {}

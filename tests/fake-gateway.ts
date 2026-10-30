@@ -101,5 +101,11 @@ export function trackerFixture(): Record<string, Cell[][]> {
     "Workout Log": [
       ["Date", "Session", "Completed", "Minutes", "Avg HR", "Active kcal", "Effort (1-10)", "Notes", "Updated At"],
     ],
+    "Daily Activity": [
+      ["Date", "Source", "Active kcal", "Exercise min", "Steps", "Distance (km)", "Resting HR", "Updated At"],
+    ],
+    "Watch Workouts": [
+      ["Date", "Start", "End", "Type", "Minutes", "Active kcal", "Avg HR", "Max HR", "Distance (km)", "Source", "Updated At"],
+    ],
   };
 }

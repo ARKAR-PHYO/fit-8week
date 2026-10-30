@@ -25,6 +25,7 @@ iPhone / Mac ──► fit.luncreative.com (Vercel)
 - All values are written `RAW`, so text that looks like a formula stays text.
 - **Check-in weight:** the *Weight (kg)* column in Weekly Measurements is a lookup formula into Daily Weight for the check-in date, so a weight entered at check-in is saved as that morning's Daily Weight entry. The app never writes into a formula cell; it returns an error instead. The Baseline row is dated the morning after Day 1, when the baseline weight is taken.
 - **Body fat estimate:** when a check-in saves waist or neck, the server recalculates the US Navy estimate (`src/lib/bodyfat.ts`) from waist, neck and the Dashboard's height, and writes it to *Body Fat % (Navy est.)*. The manual *Body Fat % (optional)* column is left for scale readings.
+- **Apple Watch activity:** an iPhone Shortcut posts each day's totals and workouts to `POST /api/ingest/activity`. That route is the only one without Google sign-in (a Shortcut can't do OAuth). It needs `Authorization: Bearer <INGEST_TOKEN>`, returns no Sheet data, and can only write the *Daily Activity* (one row per date) and *Watch Workouts* (one row per workout, keyed by start time) tabs. Re-sending a day updates the same rows. It never ticks Workout Log sessions; those stay manual. Unset `INGEST_TOKEN` to switch it off.
 - Plan content (menu, recipes, workouts) lives in `src/content/*.ts` and is prerendered; it works offline.
 
 ## Setup (one time, about 30 minutes)
@@ -77,6 +78,7 @@ Do these in order. You'll paste values into Vercel at the end; don't put them an
    | `GOOGLE_SERVICE_ACCOUNT_EMAIL` | `client_email` from the JSON key |
    | `GOOGLE_PRIVATE_KEY` | `private_key` from the JSON key, the whole value from `-----BEGIN PRIVATE KEY-----` to `-----END PRIVATE KEY-----\n`. Pasting it with literal `\n` sequences is fine; the app converts them. |
    | `SHEET_ID` | `1EHbflPj5VuAtAvf7fFbWG_u0m76p7ZFnMVUQyQFxYN8` |
+   | `INGEST_TOKEN` | Optional. Run `openssl rand -base64 33`. Needed only for the Apple Watch Shortcut; leave unset to keep that endpoint off |
 
 3. **Deployments → Redeploy** so the variables take effect.
 4. Delete the downloaded JSON key file from your Mac.
@@ -117,6 +119,7 @@ src/
   app/(app)/               Today, Recipes, Workouts, Check-in, Progress
   app/login/               sign-in page
   app/api/day|progress|sync  data endpoints (each calls requireUser())
+  app/api/ingest/activity    Apple Watch data from the iPhone Shortcut (bearer token, write-only)
   server/session.ts        requireUser(): session + allowlist re-check
   server/sheets/           gateway (Sheets API), schema (tabs/headers), repo (reads, upserts)
   lib/plan.ts              all date math, in Asia/Yangon

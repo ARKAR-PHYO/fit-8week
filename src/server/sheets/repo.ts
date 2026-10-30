@@ -10,6 +10,7 @@ import {
   type WeightOp,
   type WorkoutOp,
 } from "@/lib/ops";
+import { dailyCells, workoutCells, type ActivityPayload } from "@/lib/activity";
 import { navyBodyFatMale } from "@/lib/bodyfat";
 import { checkinDate, checkinLabel } from "@/lib/plan";
 import type { CheckinEntry, DayData, MealEntry, ProgressData, WorkoutEntry, WorkoutLogEntry } from "@/lib/types";
@@ -352,4 +353,46 @@ export async function applyOp(gw: SheetsGateway, op: Op): Promise<OpStatus> {
     case "checkin":
       return applyCheckin(gw, op);
   }
+}
+
+// ---------- Apple Watch activity (iPhone Shortcut) ----------
+
+export const ACTIVITY_SOURCE = "Apple Health";
+
+/**
+ * Writes one day's watch totals and its workouts. Re-sending the same day updates the same
+ * rows (Daily Activity by Date + Source, Watch Workouts by Date + Start), so the Shortcut can
+ * run as often as it likes. These tabs are never touched by the plan's own logs.
+ */
+export async function applyActivity(
+  gw: SheetsGateway,
+  payload: ActivityPayload,
+  at: string = new Date().toISOString(),
+): Promise<{ daily: OpStatus; workouts: number }> {
+  const daily = await upsertLogRow(
+    gw,
+    TABS.dailyActivity.name,
+    TABS.dailyActivity.headers,
+    "source",
+    { date: payload.date, value: ACTIVITY_SOURCE },
+    at,
+    dailyCells(payload),
+  );
+
+  let workouts = 0;
+  // Sequential: each upsert reads the tab, so a parallel run could append the same workout twice.
+  for (const w of payload.workouts) {
+    const { date, start, ...rest } = workoutCells(w);
+    const status = await upsertLogRow(
+      gw,
+      TABS.watchWorkouts.name,
+      TABS.watchWorkouts.headers,
+      "start",
+      { date, value: start },
+      at,
+      { ...rest, source: ACTIVITY_SOURCE },
+    );
+    if (status === "ok") workouts++;
+  }
+  return { daily, workouts };
 }
