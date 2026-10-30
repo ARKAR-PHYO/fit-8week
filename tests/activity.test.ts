@@ -51,6 +51,15 @@ describe("activity payload", () => {
     expect(p.workouts).toEqual([]);
   });
 
+  it("treats a heart rate of 0 (no samples) as not measured, but still rejects other low values", () => {
+    const p = parse({ date: "2026-10-30", restingHr: 0, workout: { start: "2026-10-30T12:58:00+06:30", end: "2026-10-30T13:00:00+06:30", type: "Workout", avgHr: 0, maxHr: "0", activeKcal: 0 } });
+    expect(p.restingHr).toBeNull();
+    expect(p.workouts[0].avgHr).toBeNull();
+    expect(p.workouts[0].maxHr).toBeNull();
+    expect(p.workouts[0].activeKcal).toBe(0);
+    expect(activityPayload.safeParse({ date: "2026-10-30", workout: { start: "2026-10-30T12:58:00+06:30", type: "W", avgHr: 12 } }).success).toBe(false);
+  });
+
   it("rejects dates outside the plan, bad numbers and bad times", () => {
     expect(activityPayload.safeParse({ date: "2026-10-27" }).success).toBe(false);
     expect(activityPayload.safeParse({ date: "2026-12-24" }).success).toBe(false);

@@ -26,6 +26,14 @@ function num(min: number, max: number) {
   ).optional();
 }
 
+/**
+ * Heart rate where 0 means "no samples": Shortcuts' Calculate Statistics returns 0 for an
+ * empty list (e.g. a short window with no readings), so 0 is stored as blank, not rejected.
+ */
+function hr(min: number, max: number) {
+  return z.preprocess((v) => (v === 0 || v === "0" ? null : v), num(min, max));
+}
+
 const round = (v: number | null | undefined, digits: number): number | "" =>
   v === null || v === undefined ? "" : Math.round(v * 10 ** digits) / 10 ** digits;
 
@@ -35,8 +43,8 @@ export const watchWorkout = z.object({
   type: z.string().trim().min(1).max(60),
   minutes: num(0, 600),
   activeKcal: num(0, 5000),
-  avgHr: num(30, 230),
-  maxHr: num(30, 240),
+  avgHr: hr(30, 230),
+  maxHr: hr(30, 240),
   distanceKm: num(0, 300),
 }).refine(
   // Guards against a stale start time (e.g. the start Shortcut didn't run): the workout
@@ -51,7 +59,7 @@ export const activityPayload = z.object({
   exerciseMin: num(0, 1440),
   steps: num(0, 200000),
   distanceKm: num(0, 300),
-  restingHr: num(25, 200),
+  restingHr: hr(25, 200),
   workouts: z.array(watchWorkout).max(20).default([]),
   /** One workout on its own (easier to build in a Shortcut than a list). Merged into `workouts`. */
   workout: watchWorkout.optional(),
