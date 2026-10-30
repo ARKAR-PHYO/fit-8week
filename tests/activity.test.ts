@@ -103,6 +103,41 @@ describe("applyActivity", () => {
     expect(tab(gw, "Watch Workouts")[1].slice(0, 5)).toEqual(["2026-10-30", "19:00:00", "19:36:30", "Walking", 36.5]);
   });
 
+  it("a workout-only request adds the workout and leaves the day's totals alone", async () => {
+    const gw = new FakeGateway(trackerFixture());
+    await applyActivity(gw, parse(oct28), "2026-10-28T16:00:00.000Z");
+    const before = [...tab(gw, "Daily Activity")[1]];
+    const res = await applyActivity(
+      gw,
+      parse({ date: "2026-10-28", workout: { start: "2026-10-28T20:00:00+06:30", end: "2026-10-28T20:20:00+06:30", type: "Workout", activeKcal: "150" } }),
+      "2026-10-28T17:00:00.000Z",
+    );
+    expect(res).toEqual({ daily: "skipped", workouts: 1 });
+    expect(tab(gw, "Daily Activity")[1]).toEqual(before);
+    expect(tab(gw, "Watch Workouts")).toHaveLength(4);
+    expect(tab(gw, "Watch Workouts")[3].slice(0, 6)).toEqual(["2026-10-28", "20:00:00", "20:20:00", "Workout", 20, 150]);
+  });
+
+  it("accepts `workout` and `workouts` together", () => {
+    const p = parse({ date: "2026-10-28", workouts: oct28.workouts, workout: { start: "2026-10-28T20:00:00+06:30", type: "Workout" } });
+    expect(p.workouts).toHaveLength(3);
+    expect("workout" in p).toBe(false);
+  });
+
+  it("rejects a workout that ends before it starts or runs longer than 12 hours", () => {
+    const bad = (start: string, end: string) =>
+      activityPayload.safeParse({ date: "2026-10-30", workout: { start, end, type: "Workout" } }).success;
+    expect(bad("2026-10-30T19:00:00+06:30", "2026-10-30T18:00:00+06:30")).toBe(false);
+    expect(bad("2026-10-29T06:00:00+06:30", "2026-10-30T19:00:00+06:30")).toBe(false);
+    expect(bad("2026-10-30T19:00:00+06:30", "2026-10-30T19:45:00+06:30")).toBe(true);
+  });
+
+  it("rejects a single workout outside the plan dates", () => {
+    const r = activityPayload.safeParse({ date: "2026-10-28", workout: { start: "2026-10-20T19:00:00+06:30", type: "Run" } });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error.issues[0].path).toEqual(["workout", "start"]);
+  });
+
   it("never touches the plan's own logs", async () => {
     const gw = new FakeGateway(trackerFixture());
     const before = JSON.stringify(["Daily Weight", "Weekly Measurements", "Meal Log", "Workout Log", "Dashboard"].map((n) => tab(gw, n)));

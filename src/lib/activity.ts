@@ -38,7 +38,12 @@ export const watchWorkout = z.object({
   avgHr: num(30, 230),
   maxHr: num(30, 240),
   distanceKm: num(0, 300),
-});
+}).refine(
+  // Guards against a stale start time (e.g. the start Shortcut didn't run): the workout
+  // must end after it starts and last at most 12 hours.
+  (w) => !w.end || (Date.parse(w.end) > Date.parse(w.start) && Date.parse(w.end) - Date.parse(w.start) <= 12 * 3600_000),
+  { message: "Workout must end after it starts and last at most 12 hours", path: ["end"] },
+);
 
 export const activityPayload = z.object({
   date: planDate,
@@ -48,15 +53,30 @@ export const activityPayload = z.object({
   distanceKm: num(0, 300),
   restingHr: num(25, 200),
   workouts: z.array(watchWorkout).max(20).default([]),
-}).superRefine((p, ctx) => {
-  p.workouts.forEach((w, i) => {
-    // An unparseable start is already reported by the field check; don't format it.
-    if (Number.isNaN(Date.parse(w.start))) return;
-    if (!isLoggableDate(toPlanLocal(w.start).date)) {
-      ctx.addIssue({ code: "custom", path: ["workouts", i, "start"], message: "Workout is outside the plan dates" });
+  /** One workout on its own (easier to build in a Shortcut than a list). Merged into `workouts`. */
+  workout: watchWorkout.optional(),
+})
+  .superRefine((p, ctx) => {
+    const all: [WatchWorkoutIn, (string | number)[]][] = p.workouts.map((w, i) => [w, ["workouts", i, "start"]]);
+    if (p.workout) all.push([p.workout, ["workout", "start"]]);
+    for (const [w, path] of all) {
+      // An unparseable start is already reported by the field check; don't format it.
+      if (Number.isNaN(Date.parse(w.start))) continue;
+      if (!isLoggableDate(toPlanLocal(w.start).date)) {
+        ctx.addIssue({ code: "custom", path, message: "Workout is outside the plan dates" });
+      }
     }
-  });
-});
+  })
+  .transform(({ workout, ...p }) => ({ ...p, workouts: workout ? [...p.workouts, workout] : p.workouts }));
+
+type WatchWorkoutIn = z.infer<typeof watchWorkout>;
+
+const DAILY_FIELDS = ["activeKcal", "exerciseMin", "steps", "distanceKm", "restingHr"] as const;
+
+/** True when the request carries any daily total. A workout-only request leaves the day's row alone. */
+export function hasDailyTotals(p: ActivityPayload): boolean {
+  return DAILY_FIELDS.some((f) => p[f] !== undefined);
+}
 
 export type ActivityPayload = z.infer<typeof activityPayload>;
 export type WatchWorkout = z.infer<typeof watchWorkout>;

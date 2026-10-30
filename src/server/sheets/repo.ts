@@ -10,7 +10,7 @@ import {
   type WeightOp,
   type WorkoutOp,
 } from "@/lib/ops";
-import { dailyCells, workoutCells, type ActivityPayload } from "@/lib/activity";
+import { dailyCells, hasDailyTotals, workoutCells, type ActivityPayload } from "@/lib/activity";
 import { navyBodyFatMale } from "@/lib/bodyfat";
 import { checkinDate, checkinLabel } from "@/lib/plan";
 import type { CheckinEntry, DayData, MealEntry, ProgressData, WorkoutEntry, WorkoutLogEntry } from "@/lib/types";
@@ -368,16 +368,19 @@ export async function applyActivity(
   gw: SheetsGateway,
   payload: ActivityPayload,
   at: string = new Date().toISOString(),
-): Promise<{ daily: OpStatus; workouts: number }> {
-  const daily = await upsertLogRow(
-    gw,
-    TABS.dailyActivity.name,
-    TABS.dailyActivity.headers,
-    "source",
-    { date: payload.date, value: ACTIVITY_SOURCE },
-    at,
-    dailyCells(payload),
-  );
+): Promise<{ daily: OpStatus | "skipped"; workouts: number }> {
+  // A workout-only request (sent when a workout ends) must not blank the day's totals.
+  const daily = hasDailyTotals(payload)
+    ? await upsertLogRow(
+        gw,
+        TABS.dailyActivity.name,
+        TABS.dailyActivity.headers,
+        "source",
+        { date: payload.date, value: ACTIVITY_SOURCE },
+        at,
+        dailyCells(payload),
+      )
+    : "skipped";
 
   let workouts = 0;
   // Sequential: each upsert reads the tab, so a parallel run could append the same workout twice.
